@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service Admin</title>
+<script>
+  // terapkan tema sebelum render supaya tidak berkedip
+  try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+</script>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="shell">
+  <aside id="sidebar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" class="logo"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <div><b>Service Admin</b><div class="muted small" id="hostName">Mac</div></div>
+    </div>
+    <nav id="tabs">
+      <div class="nav-label">Monitor</div>
+      <a href="#dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</a>
+      <div class="nav-label">Kelola</div>
+      <a href="#packages"><svg viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg><span class="nav-name">Paket &amp; Service</span><span class="nav-ver" id="svcCount"></span></a>
+      <a href="#docker" data-nav="docker"><svg viewBox="0 0 24 24"><path d="M22 12.5c-.5-.3-1.6-.4-2.4-.3-.2-.8-.7-1.5-1.3-2l-.4-.3-.3.4c-.4.6-.6 1.5-.5 2.2.1.4.2.9.5 1.2-.6.3-1.4.4-2.1.4H2.1c-.2 1.6.1 3.2.9 4.5.8 1.3 2.3 2.1 4.8 2.1 4.7 0 8.3-2.2 9.9-6.8 1 0 2.5 0 3.3-1.5l.2-.4z"/><path d="M5 11h2v2H5zM8 11h2v2H8zM11 11h2v2h-2zM8 8h2v2H8zM11 8h2v2h-2z"/></svg>Docker</a>
+      <a href="#herd" data-nav="herd"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg>Herd</a>
+      <div class="nav-label">Bahasa</div>
+      <a href="#php" data-nav="php"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="6"/><path d="M8 10v4M8 10h1.5a1 1 0 0 1 0 2H8M15 10v4M15 10h1.5a1 1 0 0 1 0 2H15M11.5 9v4.5M11.5 11h1.5v2.5"/></svg>PHP</a>
+      <a href="#node" data-nav="node"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M12 22V12M3 7l9 5 9-5"/></svg>Node.js</a>
+      <div class="nav-label">Konfigurasi</div>
+      <a href="#config"><svg viewBox="0 0 24 24"><path d="m4 17 6-6-6-6M12 19h8"/></svg><span class="nav-name">File konfigurasi</span></a>
+    </nav>
+    <div class="side-foot muted small" id="sideFoot"></div>
+  </aside>
+  <div class="content">
+    <header>
+      <button class="menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <h1 id="pageTitle">Dashboard</h1>
+      <span class="muted small" id="headline"></span>
+      <button class="icon-btn" id="jobBtn" title="Terminal & proses" aria-label="Terminal & proses">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m6 9 3 3-3 3M12 15h5"/></svg>
+        <i class="job-dot" id="jobDot" hidden></i></button>
+      <div class="theme-switch" role="radiogroup" aria-label="Tema">
+        <button role="radio" data-theme-set="light" title="Terang" aria-label="Mode terang"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+        <button role="radio" data-theme-set="system" title="Ikuti sistem" aria-label="Ikuti tema sistem"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
+        <button role="radio" data-theme-set="dark" title="Gelap" aria-label="Mode gelap"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+      </div>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+<div class="scrim" id="scrim"></div>
+
+<dialog id="logDlg">
+  <div class="dlg-head"><h3 id="logTitle">Log</h3><button onclick="logDlg.close()">Tutup</button></div>
+  <pre id="logBody"></pre>
+</dialog>
+
+<dialog id="newAppDlg" class="wide-dlg">
+  <div class="dlg-head"><h3>＋ Aplikasi Laravel baru</h3><button onclick="newAppDlg.close()">Tutup</button></div>
+  <form id="newAppForm" class="new-app"></form>
+</dialog>
+
+<aside id="job" aria-label="Terminal & proses">
+  <div class="dlg-head"><h3>Terminal &amp; proses</h3><button id="jobClose">Tutup</button></div>
+  <div id="jobList"></div>
+  <div class="job-title" id="jobTitle">Belum ada proses.</div>
+  <pre id="jobOut"></pre>
+</aside>
+
+<div class="toast" id="toast"></div>
+<div class="tip" id="tip"></div>
+<script src="app.js"></script>
+<script src="packages.js"></script>
+<script src="config.js"></script>
+<script src="dashboard.js"></script>
+<script src="docker.js"></script>
+<script src="icons.js"></script>
+<script src="langs.js"></script>
+<script>initRuntimes().then(route);</script>
+</body>
+</html>
