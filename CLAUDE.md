@@ -44,11 +44,14 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 | `svc.py` | Detail service (config file + validator per service), katalog & 100 rekomendasi paket, panel cloudflared |
 | `files.py` | Editor file konfigurasi: registry `STATIC` + resolver, php.ini, `.env` project; validator per jenis |
 | `dockerx.py` | Docker: overview, stats, disk, inspect, logs, exec console, `docker run`, compose (baca/validasi/simpan), context remote |
-| `static/index.html` | Shell: sidebar, header (tombol terminal + tema), dialog, panel proses |
-| `static/app.js` | Core UI: `api()`, `btn()`, `toast`, router hash, `handlers` (event delegation), job runner & panel terminal, tema, PHP/Node/Herd |
+| `ptyterm.py` | Terminal sungguhan: sesi `zsh -l -i` di PTY (`pty.fork`), output long-poll (`/api/pty/read`, base64), input/resize/kill lewat POST |
+| `static/index.html` | Shell: sidebar, header (tombol terminal + tema), dialog, panel kanan (tab Terminal / Proses) |
+| `static/app.js` | Core UI: `api()`, `btn()`, `toast`, router hash, `handlers` (event delegation), panel (`panelOpen`/`panelView`), job runner (`runJob`), tema, PHP/Node/Herd |
+| `static/terminal.js` | Tab Terminal: xterm.js per sesi, polling output, batching input, resize (FitAddon), reattach setelah refresh, `window.runInTerminal(cmd, cwd)` |
+| `static/vendor/` | xterm.js + addon fit/web-links (MIT), disimpan lokal, jangan diganti CDN |
 | `static/packages.js` | Halaman Paket & Service + detail service (`#service:<nama>`) + cloudflared |
 | `static/docker.js` | Semua halaman Docker (`#docker:<sub>`) + pembuat compose + dialog buat container |
-| `static/langs.js` | Menu bahasa dinamis (`#lang-<key>`) + versi di sidebar (`refreshNav`) |
+| `static/langs.js` | Halaman grup **Bahasa** (`#langs`, kartu 3 kolom + bahasa yang bisa di-install), halaman detail `#lang-<key>` (nav: `langs`), versi/status di sidebar (`applyNav`/`refreshNav`) |
 | `static/config.js` | Halaman File konfigurasi (`#config:<id>`) |
 | `static/dashboard.js` | Dashboard statistik + `lineChart()` (SVG, dipakai juga oleh docker.js) |
 | `static/icons.js` | Logo Simple Icons (CC0) + `logoSvg()` / `logoFor(formula)` |
@@ -68,12 +71,13 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
   blok di **paling bawah** `~/.zshrc` (`ensure_zshrc_block`).
 
 **Frontend**
-- Halaman = `tabs.<key> = { load(silent), interval?, nav?, leave? }`; route `#key` atau `#key:param`
+- Halaman = `tabs.<key> = { load(silent), interval?, nav?, title?, logo?, leave? }` (`nav` = item sidebar yang disorot, `title` = judul header bila berbeda); route `#key` atau `#key:param`
   (`this.param`). Alias lama: `#services`/`#apps` → `packages`, `#zsh` → `config`.
 - Tombol: `btn(label, "aksi", {data}, "go|primary|danger")` + `handlers.aksi = async (dataset, el) => …`.
   `data-confirm` otomatis memunculkan konfirmasi.
-- Proses panjang: `runJob(api("/api/…", body), onDone)`. Progres tampil di panel terminal (ikon di
-  header, titik merah saat berjalan), bukan panel bawah.
+- Proses panjang: `runJob(api("/api/…", body), onDone)`. Progres tampil di panel kanan, tab **Proses**
+  (ikon terminal di header, titik merah saat berjalan). Tab **Terminal** adalah shell PTY sungguhan;
+  program interaktif (claude, vim, tinker) harus lewat sini, bukan lewat job (job tidak punya TTY).
 - Warna selalu lewat token CSS (`--bg`, `--card`, `--text`, `--series-1..4`, …). Tema: terang/gelap/
   sistem via `html[data-theme]`; token gelap didefinisikan di dua tempat (media query + `[data-theme="dark"]`).
 - Selalu `esc()` untuk data dinamis di template string.
@@ -84,11 +88,14 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 - Tes backend: import modul langsung (`python3 -c "import dockerx; print(dockerx.overview({}))"`).
   Untuk fungsi yang menulis `~/.zshrc`/shim/state, **patch konstanta ke HOME sementara**
   (`core.HOME`, `core.DATA_DIR`, `core.SHIM_DIR`, …) supaya file asli user tidak berubah.
+- Tes PTY: `import ptyterm`, `new_session` → `write(..."perintah\r")` → `read` (base64) → `kill`. Kalau
+  menjalankan `claude` untuk tes, keluar dengan `\x03` lalu `kill` sesi.
 - Tes UI: tidak ada Chrome; pakai Firefox headless
   `/Applications/Firefox.app/Contents/MacOS/firefox --headless --profile <dir> --no-remote --window-size=1300,1100 --screenshot out.png file://…`.
   Screenshot diambil saat event `load`, jadi buat halaman harness yang me-*stub* `window.fetch` dengan
   JSON hasil API asli dan jalankan aksi uji langsung di chain `initRuntimes().then(route).then(...)`
-  (bukan `setTimeout`). Matikan transisi CSS kalau perlu (`#job{transition:none}`).
+  (bukan `setTimeout`). Matikan transisi CSS kalau perlu (`#job{transition:none}`). Untuk konten yang
+  dirender async (xterm.js), tahan event `load` dengan `<img>` dari server kecil yang sengaja lambat.
 - Setelah mengubah `.py`, restart server (`kill $(lsof -ti tcp:8765)`, lalu jalankan lagi). File statis
   dikirim dengan `Cache-Control: no-cache`, jadi cukup refresh browser.
 
