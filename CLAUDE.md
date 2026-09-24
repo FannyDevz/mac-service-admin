@@ -54,6 +54,7 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 | `static/langs.js` | Halaman grup **Bahasa** (`#langs`, kartu 3 kolom + bahasa yang bisa di-install), halaman detail `#lang-<key>` (nav: `langs`), versi/status di sidebar (`applyNav`/`refreshNav`) |
 | `static/config.js` | Halaman File konfigurasi (`#config:<id>`) |
 | `static/dashboard.js` | Dashboard statistik + `lineChart()` (SVG, dipakai juga oleh docker.js) |
+| `macapp/main.swift`, `install.sh` | Peluncur `Service Admin.app` (nyalakan server via LaunchAgent/fallback lalu buka browser) dan installer LaunchAgent `local.service-admin`. Server dari launchd butuh izin macOS *Files & Folders → Documents* untuk Python karena project ada di `~/Documents` |
 | `static/icons.js` | Logo Simple Icons (CC0) + `logoSvg()` / `logoFor(formula)` |
 
 ## Pola kode

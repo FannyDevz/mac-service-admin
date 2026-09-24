@@ -121,37 +121,34 @@ Tema **terang / gelap / ikut sistem**, sidebar responsif (menu hamburger di laya
 
 ## Menjalankan
 
+### Cara termudah: pasang sebagai aplikasi
+
 ```bash
 git clone git@github.com:FannyDevz/mac-service-admin.git
 cd mac-service-admin
+./install.sh
+```
+
+Installer ini:
+1. Membuat **Service Admin.app** (peluncur kecil dengan ikon sendiri) di `/Applications`. Buka dari
+   **Spotlight (⌘Space → "Service Admin")**, Launchpad, atau Dock, maka dashboard terbuka di **browser default**.
+2. Memasang **server otomatis saat login** (LaunchAgent `local.service-admin`), yang dinyalakan ulang kalau berhenti.
+
+> **Pertama kali:** macOS akan bertanya *"Python" ingin mengakses file di folder Dokumen*. Klik **Izinkan**, karena
+> server membaca project di `~/Documents`. Kalau dialognya terlewat: *System Settings → Privacy & Security →
+> Files & Folders → Python → Documents*.
+
+Tips: bookmark `http://127.0.0.1:8765`, atau pasang sebagai web app lewat Safari (*File → Add to Dock*).
+
+Setelah `git pull`, jalankan `./install.sh` lagi untuk memperbarui aplikasi. Untuk melepas: `./uninstall.sh`
+(data di `~/.service-admin` tetap disimpan).
+
+### Manual (tanpa aplikasi)
+
+```bash
 python3 server.py              # buka http://127.0.0.1:8765
 python3 server.py --port 9000  # port lain
 ```
-
-### Auto-start saat login (opsional)
-
-Jalankan dari folder project. Perintah ini membuat LaunchAgent yang menyalakan dashboard setiap kali login:
-
-```bash
-cat > ~/Library/LaunchAgents/local.service-admin.plist <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>local.service-admin</string>
-  <key>ProgramArguments</key><array>
-    <string>$(command -v python3)</string><string>$PWD/server.py</string>
-  </array>
-  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardErrorPath</key><string>$HOME/.service-admin/logs/server.log</string>
-</dict></plist>
-EOF
-mkdir -p ~/.service-admin/logs
-launchctl load ~/Library/LaunchAgents/local.service-admin.plist
-```
-
-Untuk menghentikan: `launchctl unload ~/Library/LaunchAgents/local.service-admin.plist`
 
 ---
 
@@ -217,6 +214,9 @@ files.py         editor file konfigurasi (registry + validator)
 dockerx.py       manajemen Docker
 ptyterm.py       terminal PTY untuk browser
 static/          UI (index.html, app.js, *.js per halaman, app.css, icons.js, vendor/xterm)
+macapp/          peluncur macOS (main.swift: nyalakan server → buka browser) + pembuat ikon
+install.sh       build & pasang Service Admin.app + server otomatis (LaunchAgent)
+uninstall.sh     lepas aplikasi & LaunchAgent
 docs/            screenshot
 CLAUDE.md        panduan arsitektur & konvensi untuk pengembangan
 ```
