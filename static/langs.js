@@ -10,49 +10,78 @@ function setNavVersion(a, version, running) {
   v.innerHTML = dot + esc(version || "");
 }
 
+let runtimeInfo = { langs: [], available: [] };
 function applyNav(d) {
-  const byKey = Object.fromEntries(d.langs.map((l) => [l.key, l]));
-  for (const key of ["php", "node"]) {
-    const a = document.querySelector(`[data-nav="${key}"]`);
-    if (a) setNavVersion(a, byKey[key]?.version || "–");
-  }
+  runtimeInfo = d;
+  const langs = document.querySelector('[data-nav="langs"]');
+  if (langs) setNavVersion(langs, `${d.langs.length}`);
   const docker = document.querySelector('[data-nav="docker"]');
   if (docker) setNavVersion(docker, d.docker?.version || "–", d.docker ? d.docker.running : null);
   const herd = document.querySelector('[data-nav="herd"]');
   if (herd) setNavVersion(herd, d.herd?.version || "–", d.herd ? d.herd.running : null);
-  for (const l of d.langs) {
-    const a = document.querySelector(`[data-nav="lang-${l.key}"]`);
-    if (a) setNavVersion(a, l.version);
-  }
+  if (current === tabs.langs && $("langGrid")) tabs.langs.render();
 }
 
+const langHref = (key) => (key === "php" || key === "node" ? `#${key}` : `#lang-${key}`);
+
 async function initRuntimes() {
-  // logo untuk item statis (PHP, Node.js, Docker, Herd)
+  // logo untuk item statis (Docker, Herd)
   document.querySelectorAll("[data-nav]").forEach((a) => {
     const logo = logoSvg(a.dataset.nav);
     if (logo) a.querySelector("svg").outerHTML = logo;
   });
-  let d = { langs: [] };
-  try { d = await api("/api/runtimes"); } catch { /* sidebar tetap tampil tanpa bahasa tambahan */ }
-  const anchor = document.querySelector('[data-nav="node"]');
-  d.langs.filter((l) => !l.builtin).reverse().forEach((l) => {
-    tabs[`lang-${l.key}`] = makeLangTab(l.key);
-    const a = document.createElement("a");
-    a.href = `#lang-${l.key}`;
-    a.dataset.nav = `lang-${l.key}`;
-    a.innerHTML = `${logoSvg(l.key) || LANG_ICON}<span class="nav-name">${esc(l.name)}</span>`;
-    anchor.after(a);
-  });
+  // halaman PHP & Node (app.js) dan halaman bahasa lain berada di bawah menu "Bahasa pemrograman"
+  Object.assign(tabs.php, { nav: "langs", title: "PHP", logo: "php" });
+  Object.assign(tabs.node, { nav: "langs", title: "Node.js", logo: "node" });
+  let d = { langs: [], available: [] };
+  try { d = await api("/api/runtimes"); } catch { /* halaman tetap tampil */ }
+  d.langs.filter((l) => !l.builtin).forEach((l) => { tabs[`lang-${l.key}`] = makeLangTab(l.key); });
   applyNav(d);
 }
 
-// perbarui versi di sidebar (mis. setelah ganti default PHP/Node/Python)
-async function refreshNav() {
-  try { applyNav(await api("/api/runtimes")); } catch { /* abaikan */ }
+// perbarui versi di sidebar & halaman bahasa (mis. setelah ganti default)
+async function refreshNav(force) {
+  try { applyNav(await api(`/api/runtimes${force ? "?refresh=1" : ""}`)); } catch { /* abaikan */ }
 }
+
+// ------------------------------------------------------------ halaman grup: semua bahasa
+tabs.langs = {
+  title: "Bahasa pemrograman",
+  async load() {
+    view.innerHTML = `<div id="langGrid"><div class="loading">Mendeteksi bahasa…</div></div>`;
+    await refreshNav();
+    this.render();
+  },
+  render() {
+    const { langs, available = [] } = runtimeInfo;
+    $("headline").textContent = `${langs.length} bahasa terinstall`;
+    $("langGrid").innerHTML = `
+      <div class="grid lang-grid">${langs.map((l) => `
+        <a class="card lang-card" href="${langHref(l.key)}">
+          <div class="row" style="flex-wrap:nowrap;gap:12px">
+            ${logoSvg(l.key, "lang-logo") || `<span class="lang-logo pkg-fallback">${esc(l.name[0])}</span>`}
+            <div style="min-width:0"><div class="lang-name">${esc(l.name)}</div>
+              <div class="lang-ver">${esc(l.version || "?")}</div></div></div>
+          <div class="row" style="gap:6px;margin:12px 0 6px">
+            <span class="badge ${l.source === "Homebrew" ? "" : "blue"}">${esc(l.source)}</span>
+            ${l.overridden ? `<span class="badge green" title="Versi default dipilih lewat Service Admin">default diatur</span>` : ""}
+            ${l.managed || l.builtin ? "" : `<span class="badge">info</span>`}</div>
+          <div class="muted small lang-path"><code>${esc(l.path.replace(/^\/Users\/[^/]+/, "~"))}</code></div>
+          <div class="lang-foot">${l.managed || l.builtin ? "Kelola versi & paket →" : "Lihat detail →"}</div>
+        </a>`).join("")}</div>
+      ${available.length ? `<h2>Belum terinstall <span class="muted small">install lewat Homebrew</span></h2>
+        <div class="grid lang-grid small">${available.map((a) => `<div class="card lang-card muted-card">
+          <div class="row" style="flex-wrap:nowrap;gap:12px">${logoSvg(a.key, "lang-logo") || `<span class="lang-logo pkg-fallback">${esc(a.name[0])}</span>`}
+            <div><div class="lang-name">${esc(a.name)}</div><div class="muted small"><code>${esc(a.formula)}</code>${a.type === "cask" ? " (app)" : ""}</div></div></div>
+          <div class="lang-foot">${btn("Install", "langInstall", { formula: a.formula, type: a.type, name: a.name }, "go")}</div></div>`).join("")}</div>` : ""}`;
+  },
+};
+handlers.langInstall = (d) => runJob(api("/api/apps/action", { name: d.formula, type: d.type, action: "install" }),
+  () => refreshNav(true).then(() => { for (const l of runtimeInfo.langs) if (!l.builtin) tabs[`lang-${l.key}`] ??= makeLangTab(l.key); }));
 
 function makeLangTab(key) {
   return {
+    nav: "langs",
     async load() {
       let d;
       try { d = await api(`/api/lang?key=${key}`); } catch (e) { return failView(e); }
@@ -71,6 +100,7 @@ function makeLangTab(key) {
           <div class="actions">${d.selectable && sel !== i.id ? btn("Jadikan default", "langAct", { key, action: "select", id: i.id }, "primary") : ""}</div>
         </div>`).join("")}</div>` : "";
       view.innerHTML = `
+        <p style="margin:0 0 12px"><a href="#langs">← Bahasa pemrograman</a></p>
         <div class="stat">
           <div class="card"><div>Terminal baru memakai</div><div>${esc(d.name)} ${esc(d.active.version || "tidak ditemukan")}</div>
             <div class="muted small"><code>${esc(d.active.path || "-")}</code> · ${esc(d.active.source || "")}</div></div>
@@ -115,7 +145,7 @@ const LANG_RENDER = {
     body: (d) => `
       <h2 class="row">Aplikasi CLI (pipx) <span class="spacer"></span>
         ${d.pipx?.length ? btn("Upgrade semua", "langAct", { key: "python", action: "pipx-upgrade-all", job: 1 }) : ""}</h2>
-      ${d.pipx == null ? `<div class="muted small">pipx tidak terinstall. Install lewat tab Aplikasi (cari <code>pipx</code>).</div>` : `
+      ${d.pipx == null ? `<div class="muted small">pipx tidak terinstall. Install lewat <a href="#packages">Paket &amp; Service</a> (cari <code>pipx</code>).</div>` : `
         ${tableOf(["Paket", "Versi", "Perintah", ""], d.pipx.map((p) => `<tr><td><b>${esc(p.name)}</b></td><td><code>${esc(p.version)}</code></td>
           <td class="small">${p.apps.map((a) => `<code>${esc(a)}</code>`).join(" ")}</td>
           <td><div class="actions">${btn("Upgrade", "langAct", { key: "python", action: "pipx-upgrade", name: p.name, job: 1 })}
@@ -142,7 +172,7 @@ const LANG_RENDER = {
   go: {
     warn: (d) => d.latest && d.active.version && d.latest !== d.active.version
       ? `<div class="warn">⬆️ Go <b>${esc(d.latest)}</b> sudah rilis (kamu memakai ${esc(d.active.version)}).
-          ${d.active.source === "Homebrew" ? `Upgrade lewat tab Aplikasi (<code>go</code>).`
+          ${d.active.source === "Homebrew" ? `Upgrade lewat <a href="#packages">Paket &amp; Service</a> (<code>go</code>).`
             : `Download installer-nya di <a href="https://go.dev/dl/" target="_blank" rel="noopener">go.dev/dl</a>.`}</div>` : "",
     body: (d) => !d.env ? "" : `
       <div class="grid two" style="margin-top:14px">
@@ -204,7 +234,7 @@ const LANG_RENDER = {
 
   ruby: {
     warn: (d) => d.system_ruby ? `<div class="warn">ℹ️ Kamu memakai Ruby bawaan macOS (${esc(d.active.version)}). Versi ini lama dan
-      <code>gem install</code> butuh sudo. Untuk development, install <code>ruby</code> lewat tab Aplikasi lalu jadikan default di sini.</div>` : "",
+      <code>gem install</code> butuh sudo. Untuk development, install <code>ruby</code> lewat <a href="#packages">Paket &amp; Service</a> lalu jadikan default di sini.</div>` : "",
     body: (d) => `<h2 class="row">Gem terinstall <span class="spacer"></span><span class="muted small">${(d.gems || []).length} gem</span></h2>
       ${tableOf(["Gem", "Versi"], (d.gems || []).map((g) => `<tr><td>${esc(g.name)}</td><td class="small"><code>${esc(g.version)}</code></td></tr>`))}`,
   },

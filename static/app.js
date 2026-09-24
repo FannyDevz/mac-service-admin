@@ -166,6 +166,7 @@ async function route() {
       $("pageTitle").innerHTML = (logo ? logo.outerHTML.replace('class="logo-i', 'class="logo-i title-logo') : "") + esc(label);
     }
   });
+  if (tab.title) $("pageTitle").innerHTML = (tab.logo ? logoSvg(tab.logo, "title-logo") : "") + esc(tab.title);
   $("headline").textContent = "";
   document.body.classList.remove("nav-open");
   clearInterval(refreshTimer);
@@ -219,6 +220,7 @@ tabs.php = {
         </div></td></tr>`).join("")}
       </table></div>` : "";
     view.innerHTML = `
+      <p style="margin:0 0 12px"><a href="#langs">← Bahasa pemrograman</a></p>
       <div class="stat">
         <div class="card"><div>Terminal baru memakai</div><div>PHP ${esc(d.shell.version || "tidak ditemukan")}</div>
           <div class="muted small"><code>${esc(d.shell.path || "-")}</code></div></div>
@@ -231,7 +233,7 @@ tabs.php = {
       <div class="list">${rows}</div>
       <p class="muted small">Memilih PHP dari <b>Herd</b> juga menjalankan <code>herd use</code>, jadi situs Herd ikut pindah versi.
         Memilih PHP <b>Homebrew</b> hanya mengubah CLI. Terminal yang sudah terbuka langsung ikut, tanpa <code>source</code>.
-        Untuk install PHP Homebrew versi lain, cari <code>php@</code> di tab Aplikasi.</p>
+        Untuk install PHP Homebrew versi lain, cari <code>php@</code> di <a href="#packages">Paket &amp; Service</a>.</p>
       ${herd}`;
   },
 };
@@ -250,7 +252,7 @@ tabs.node = {
     try { d = await api("/api/node"); } catch (e) { return failView(e); }
     $("headline").textContent = `Node aktif: ${d.shell.version || "-"}`;
     if (!d.nvm) {
-      view.innerHTML = `<div class="warn">nvm tidak ditemukan. Install lewat tab Aplikasi (cari <code>nvm</code>).</div>`;
+      view.innerHTML = `<div class="warn">nvm tidak ditemukan. Install lewat <a href="#packages">Paket &amp; Service</a> (cari <code>nvm</code>).</div>`;
       return;
     }
     const broken = d.default_resolved === "N/A";
@@ -264,6 +266,7 @@ tabs.node = {
           ${removable && !isDefault(v) ? btn("Uninstall", "nodeJob", { action: "uninstall", version: v, confirm: `Uninstall Node ${v}?` }, "danger") : ""}
         </div></div>`;
     view.innerHTML = `
+      <p style="margin:0 0 12px"><a href="#langs">← Bahasa pemrograman</a></p>
       <div class="stat">
         <div class="card"><div>Terminal baru memakai</div><div>Node ${esc(d.shell.version || "tidak ditemukan")}</div>
           <div class="muted small"><code>${esc(d.shell.path || "-")}</code></div></div>
@@ -314,7 +317,7 @@ tabs.herd = {
   async load() {
     let d;
     try { d = await api("/api/herd"); } catch (e) { return failView(e); }
-    if (!d.installed) { view.innerHTML = `<div class="warn">Laravel Herd tidak terinstall. Install lewat tab Aplikasi (cari <code>herd</code>).</div>`; return; }
+    if (!d.installed) { view.innerHTML = `<div class="warn">Laravel Herd tidak terinstall. Install lewat <a href="#packages">Paket &amp; Service</a> (cari <code>herd</code>).</div>`; return; }
     const p = d.processes, running = p.nginx && p.fpm.length;
     $("headline").textContent = `Herd ${d.version} · ${d.sites.length} situs`;
     const phpOpts = (site) => [`<option value="global" ${site.isolated ? "" : "selected"}>Global (${esc(d.global_php)})</option>`]

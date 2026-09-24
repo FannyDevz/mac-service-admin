@@ -46,6 +46,15 @@ LANGS = [
     ("perl", "Perl", "perl", ["-e", "print $^V"]),
 ]
 MANAGED = {"python", "go", "rust", "java", "ruby"}
+# formula/cask Homebrew untuk bahasa yang belum terinstall (Swift butuh Xcode, jadi tidak ada di sini)
+INSTALL = {"php": ("php", "formula"), "node": ("node", "formula"), "python": ("python", "formula"), "go": ("go", "formula"),
+           "rust": ("rustup", "formula"), "java": ("openjdk", "formula"), "ruby": ("ruby", "formula"),
+           "deno": ("deno", "formula"), "bun": ("bun", "formula"), "dotnet": ("dotnet-sdk", "cask"),
+           "dart": ("dart-sdk", "formula"), "kotlin": ("kotlin", "formula"), "scala": ("scala", "formula"),
+           "elixir": ("elixir", "formula"), "erlang": ("erlang", "formula"), "zig": ("zig", "formula"),
+           "haskell": ("ghc", "formula"), "ocaml": ("ocaml", "formula"), "julia": ("julia", "formula"),
+           "r": ("r", "formula"), "crystal": ("crystal", "formula"), "nim": ("nim", "formula"),
+           "lua": ("lua", "formula"), "perl": ("perl", "formula")}
 BUILTIN = {"php", "node"}  # punya halaman sendiri di server.py
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+@/-]*$")
 _cache = {"t": 0, "data": None}
@@ -65,7 +74,7 @@ def version_of(path, args):
 
 def source_of(path):
     real = os.path.realpath(path or "")
-    rules = [(SHIM_DIR, "Service Admin"), (f"{BREW_PREFIX}/", "Homebrew"), (f"{HOME}/.cargo", "rustup"),
+    rules = [(SHIM_DIR, "Service Admin"), (f"{HOME}/Library/Application Support/Herd", "Herd"), (f"{BREW_PREFIX}/", "Homebrew"), (f"{HOME}/.cargo", "rustup"),
              ("/usr/local/go", "go.dev installer"), (f"{HOME}/.pyenv", "pyenv"), (f"{HOME}/.rbenv", "rbenv"),
              (f"{HOME}/.rvm", "rvm"), ("/Library/Frameworks/Python.framework", "python.org"),
              (f"{HOME}/.local/share/uv", "uv"), (f"{HOME}/sdk/go", "golang.org/dl"),
@@ -105,7 +114,14 @@ def detect(force=False):
             continue  # /usr/bin/java tanpa JDK terpasang
         data.append({"key": key, "name": name, "path": path, "version": ver, "source": source_of(path),
                      "managed": key in MANAGED, "builtin": key in BUILTIN, "formula": brew_formula(path)})
-    _cache.update(t=time.time(), data={"langs": data})
+    found_keys = {d["key"] for d in data}
+    available = [{"key": k, "name": n, "formula": INSTALL[k][0], "type": INSTALL[k][1]}
+                 for k, n, _, _ in LANGS if k not in found_keys and k in INSTALL]
+    state = load_state()
+    for d in data:  # versi default diatur lewat Service Admin?
+        d["overridden"] = bool((state.get("shims") or {}).get(d["key"])) or bool((state.get("env") or {}).get(d["key"])) \
+            or (d["key"] == "php" and bool(state.get("php")))
+    _cache.update(t=time.time(), data={"langs": data, "available": available})
     return _cache["data"]
 
 
