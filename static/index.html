@@ -8,6 +8,7 @@
   // terapkan tema sebelum render supaya tidak berkedip
   try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
 </script>
+<link rel="stylesheet" href="vendor/xterm.css">
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -37,7 +38,7 @@
       <button class="menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <h1 id="pageTitle">Dashboard</h1>
       <span class="muted small" id="headline"></span>
-      <button class="icon-btn" id="jobBtn" title="Terminal & proses" aria-label="Terminal & proses">
+      <button class="icon-btn" id="jobBtn" title="Terminal & proses (Ctrl+`)" aria-label="Terminal & proses">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m6 9 3 3-3 3M12 15h5"/></svg>
         <i class="job-dot" id="jobDot" hidden></i></button>
       <div class="theme-switch" role="radiogroup" aria-label="Tema">
@@ -62,15 +63,36 @@
 </dialog>
 
 <aside id="job" aria-label="Terminal & proses">
-  <div class="dlg-head"><h3>Terminal &amp; proses</h3><button id="jobClose">Tutup</button></div>
-  <div id="jobList"></div>
-  <div class="job-title" id="jobTitle">Belum ada proses.</div>
-  <pre id="jobOut"></pre>
+  <div class="dlg-head panel-head">
+    <div class="seg" id="panelTabs">
+      <button data-view="term" class="active">Terminal</button>
+      <button data-view="jobs">Proses <i class="job-dot inline" id="jobDot2" hidden></i></button>
+    </div>
+    <span class="spacer"></span>
+    <label class="muted small" title="Aplikasi untuk tombol ↗">Buka di
+      <select id="termApp" style="padding:3px 6px"><option value="terminal">Terminal</option></select></label>
+    <button id="termExt" title="Buka folder sesi ini di aplikasi terminal">↗</button>
+    <button id="jobClose" title="Tutup (Ctrl+`)">Tutup</button>
+  </div>
+  <section id="viewTerm" class="panel-view">
+    <div class="term-tabs" id="termTabs"></div>
+    <div id="termHost"></div>
+  </section>
+  <section id="viewJobs" class="panel-view" hidden>
+    <div id="jobList"></div>
+    <div class="job-title row" style="flex-wrap:nowrap"><span id="jobTitle" class="spacer">Belum ada proses.</span>
+      <button id="jobStop" class="danger" hidden>Stop</button></div>
+    <pre id="jobOut"></pre>
+  </section>
 </aside>
 
 <div class="toast" id="toast"></div>
 <div class="tip" id="tip"></div>
+<script src="vendor/xterm.js"></script>
+<script src="vendor/addon-fit.js"></script>
+<script src="vendor/addon-web-links.js"></script>
 <script src="app.js"></script>
+<script src="terminal.js"></script>
 <script src="packages.js"></script>
 <script src="config.js"></script>
 <script src="dashboard.js"></script>

@@ -87,9 +87,9 @@ JOB_IDS = itertools.count(1)
 JOB_LOCK = threading.Lock()
 
 
-def start_job(label, cmd, kind, cwd=None, env=None):
+def start_job(label, cmd, kind, cwd=None, env=None, exclusive=True):
     with JOB_LOCK:
-        if any(j["kind"] == kind and not j["done"] for j in JOBS.values()):
+        if exclusive and any(j["kind"] == kind and not j["done"] for j in JOBS.values()):
             raise ApiError(f"Masih ada proses {kind} yang berjalan, tunggu sampai selesai.",
                            HTTPStatus.CONFLICT)
         job_id = str(next(JOB_IDS))
@@ -99,11 +99,21 @@ def start_job(label, cmd, kind, cwd=None, env=None):
     def worker():
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
-                                    stdin=subprocess.DEVNULL, text=True, env=env or ENV, bufsize=1)
+                                    stdin=subprocess.DEVNULL, text=True, env=env or ENV, bufsize=1,
+                                    start_new_session=True)  # grup proses sendiri -> bisa dihentikan semua
+            job["_proc"] = proc
             for line in proc.stdout:
+                if line.startswith("__SA_PWD__"):  # folder kerja terakhir dari perintah shell
+                    job["pwd"] = line[10:].strip()
+                    if job["lines"] and job["lines"][-1] == "":
+                        job["lines"].pop()  # baris kosong sebelum penanda
+                    continue
                 job["lines"].append(line.rstrip("\n"))
                 del job["lines"][:-5000]
             job["code"] = proc.wait()
+            if job.get("cancelled"):
+                job["code"] = 143  # 128 + SIGTERM, walau trap EXIT di shell keluar dengan 0
+                job["lines"].append("⏹  Dihentikan.")
         except Exception as e:  # noqa: BLE001
             job["lines"].append(f"ERROR: {e}")
             job["code"] = -1
@@ -163,14 +173,36 @@ def start_steps(label, steps, kind):
 def list_jobs(q=None):
     """Proses terbaru (untuk tombol terminal di header)."""
     jobs = sorted(JOBS.values(), key=lambda j: -j["started"])[:30]
-    return {"jobs": [{k: v for k, v in j.items() if k != "lines"} | {"lines_count": len(j["lines"])} for j in jobs]}
+    return {"jobs": [{k: v for k, v in j.items() if k != "lines" and not k.startswith("_")} | {"lines_count": len(j["lines"])}
+                     for j in jobs]}
+
+
+def cancel_job(body):
+    """Hentikan job (SIGTERM ke seluruh grup prosesnya, SIGKILL kalau bandel)."""
+    import signal
+    job = JOBS.get(str(body.get("id", "")))
+    if not job:
+        raise ApiError("job tidak ditemukan", HTTPStatus.NOT_FOUND)
+    proc = job.get("_proc")
+    if job["done"] or not proc:
+        return {"ok": True}
+    job["cancelled"] = True
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+        try:
+            proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    return {"ok": True}
 
 
 def get_job(job_id, offset):
     job = JOBS.get(job_id)
     if not job:
         raise ApiError("job tidak ditemukan", HTTPStatus.NOT_FOUND)
-    return {**{k: v for k, v in job.items() if k != "lines"},
+    return {**{k: v for k, v in job.items() if k != "lines" and not k.startswith("_")},
             "lines": job["lines"][offset:], "offset": len(job["lines"])}
 
 

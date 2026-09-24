@@ -31,34 +31,60 @@ function showLog(title, text) {
   $("logBody").scrollTop = $("logBody").scrollHeight;
 }
 
-// ------------------------------------------------------------ terminal & proses
-// Proses panjang (brew install, laravel new, docker ...) berjalan di background.
-// Tombol terminal di header diberi titik merah selama ada yang berjalan;
-// klik untuk membuka panel berisi daftar proses + output-nya.
+// ------------------------------------------------------------ panel terminal & proses
+// Panel kanan (ikon terminal di header / Ctrl+`) punya 2 tab:
+//  - Terminal: shell zsh sungguhan (PTY + xterm.js, lihat terminal.js) — claude, vim, htop jalan normal.
+//  - Proses: job background (brew install, laravel new, docker ...). Titik merah = ada yang berjalan.
 const jobs = {};          // id -> { id, label, done, code, text, offset }
-let jobShown = null;      // id yang sedang ditampilkan di panel
+let jobShown = null;      // job yang ditampilkan di tab Proses
+
+function panelView(v) {
+  $("viewTerm").hidden = v !== "term";
+  $("viewJobs").hidden = v !== "jobs";
+  document.querySelectorAll("#panelTabs button").forEach((b) => b.classList.toggle("active", b.dataset.view === v));
+  if (v === "term") terminalShown?.();
+}
+function panelOpen(view) {
+  $("job").classList.add("show");
+  panelView(view || ($("viewJobs").hidden ? "term" : "jobs"));
+}
+const panelClose = () => $("job").classList.remove("show");
+$("panelTabs").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) panelView(b.dataset.view); };
+$("jobBtn").onclick = () => {
+  if ($("job").classList.contains("show")) return panelClose();
+  panelOpen(Object.values(jobs).some((j) => !j.done) ? "jobs" : "term");
+};
+$("jobClose").onclick = panelClose;
+// Ctrl+` membuka/menutup panel (fase capture supaya tetap jalan saat fokus di xterm)
+window.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key === "`") { e.preventDefault(); e.stopPropagation(); $("jobBtn").click(); }
+}, true);
 
 function jobIcon(j) { return j.done ? (j.code === 0 ? "✅" : "❌") : "⏳"; }
 function renderJobs() {
   const list = Object.values(jobs).sort((a, b) => b.id - a.id);
   const running = list.some((j) => !j.done);
   $("jobDot").hidden = !running;
-  $("jobBtn").title = running ? "Ada proses berjalan — klik untuk melihat" : "Terminal & proses";
+  $("jobDot2").hidden = !running;
+  $("jobBtn").title = running ? "Ada proses berjalan — klik untuk melihat" : "Terminal & proses (Ctrl+`)";
   $("jobList").innerHTML = list.map((j) => `<button class="job-item ${j.id === jobShown ? "active" : ""}" data-job="${j.id}">
     ${jobIcon(j)} ${esc(j.label)}</button>`).join("") || `<div class="muted small" style="padding:10px 16px">Belum ada proses di sesi ini.</div>`;
   const j = jobs[jobShown];
   $("jobTitle").textContent = j ? `${jobIcon(j)} ${j.label}${j.done ? (j.code === 0 ? " — selesai" : ` — gagal (exit ${j.code})`) : " — berjalan…"}` : "Pilih proses di atas.";
   const out = $("jobOut");
   if (j && out.dataset.job !== String(j.id)) { out.dataset.job = j.id; out.textContent = j.text; out.scrollTop = out.scrollHeight; }
+  if (!j) { out.dataset.job = ""; out.textContent = "Proses background (install, upgrade, compose, dll.) muncul di sini."; }
+  $("jobStop").hidden = !j || j.done;
 }
 function openJobs(id) {
   if (id) jobShown = id;
-  $("job").classList.add("show");
+  panelOpen("jobs");
   renderJobs();
 }
-$("jobBtn").onclick = () => ($("job").classList.contains("show") ? $("job").classList.remove("show") : openJobs(jobShown));
-$("jobClose").onclick = () => $("job").classList.remove("show");
 $("jobList").onclick = (e) => { const b = e.target.closest("[data-job]"); if (b) { jobShown = +b.dataset.job; $("jobOut").dataset.job = ""; renderJobs(); } };
+$("jobStop").onclick = async () => {
+  if (jobShown) try { await api("/api/job/cancel", { id: jobShown }); } catch (err) { toast(err.message, true); }
+};
 
 async function followJob(id, onDone) {
   const j = jobs[id];
@@ -75,7 +101,7 @@ async function followJob(id, onDone) {
     if (d.done) {
       Object.assign(j, { done: true, code: d.code });
       renderJobs();
-      toast(d.code === 0 ? `✅ ${d.label} selesai` : `❌ ${d.label} gagal (exit ${d.code}) — buka ikon terminal untuk detail`, d.code !== 0);
+      toast(d.code === 0 ? `✅ ${d.label} selesai` : `❌ ${d.label} gagal (exit ${d.code}) — buka ikon terminal → Proses`, d.code !== 0);
       break;
     }
     renderJobs();
@@ -91,7 +117,7 @@ async function runJob(promise, onDone) {
   jobShown = id;
   $("jobOut").dataset.job = "";
   renderJobs();
-  toast("⏳ Proses dimulai — lihat progres di ikon terminal (kanan atas)");
+  toast("⏳ Proses dimulai — lihat progres di ikon terminal (kanan atas) → Proses");
   return followJob(id, onDone);
 }
 

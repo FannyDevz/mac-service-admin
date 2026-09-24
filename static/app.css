@@ -270,7 +270,7 @@ code.secret { cursor: pointer; color: var(--muted); }
 .job-dot { position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-radius: 50%; background: #ef4444;
            box-shadow: 0 0 0 2px var(--card); animation: jobPulse 1.2s ease-in-out infinite; }
 @keyframes jobPulse { 50% { transform: scale(1.35); opacity: .6; } }
-#job { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); z-index: 35; background: var(--card);
+#job { position: fixed; top: 0; right: 0; bottom: 0; width: min(880px, 100vw); z-index: 35; background: var(--card);
        border-left: 1px solid var(--border); box-shadow: -10px 0 30px rgb(0 0 0 / .18); display: flex; flex-direction: column;
        transform: translateX(105%); transition: transform .2s; }
 #job.show { transform: none; }
@@ -280,3 +280,26 @@ code.secret { cursor: pointer; color: var(--muted); }
 .job-item.active { background: var(--soft); color: var(--accent); }
 .job-title { padding: 10px 16px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--border); }
 #jobOut { flex: 1; margin: 0; background: #0b0e14; color: #d6deeb; font-size: 12.5px; }
+
+
+/* ---------------------------------------------------------------- panel: terminal sungguhan (xterm.js) */
+.panel-head { gap: 10px; }
+.panel-head h3 { display: none; }
+.panel-view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.panel-view[hidden] { display: none !important; }
+.job-dot.inline { position: static; display: inline-block; width: 7px; height: 7px; margin-left: 4px; box-shadow: none; vertical-align: 1px; }
+.term-tabs { display: flex; gap: 2px; padding: 6px 8px 0; background: #0b0e14; overflow-x: auto; flex: none; }
+.term-tab { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 7px 7px 0 0; padding: 6px 10px;
+            background: #151a23; color: #8b93a5; font-size: 12px; white-space: nowrap; }
+.term-tab.active { background: #1e2533; color: #d6deeb; }
+.term-tab .dot { width: 7px; height: 7px; }
+.term-x { margin-left: 2px; opacity: .5; padding: 0 2px; border-radius: 4px; }
+.term-x:hover { opacity: 1; background: #2a3242; }
+.term-new { background: transparent; font-size: 14px; }
+#termHost { flex: 1; min-height: 0; background: #0b0e14; padding: 6px 4px 4px 10px; position: relative; }
+.term-pane { position: absolute; inset: 6px 4px 4px 10px; }
+.term-pane[hidden] { display: none; }
+.term-pane .xterm { height: 100%; }
+.term-pane .xterm-viewport::-webkit-scrollbar { width: 8px; }
+.term-pane .xterm-viewport::-webkit-scrollbar-thumb { background: #2a3242; border-radius: 4px; }
+

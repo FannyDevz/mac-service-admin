@@ -22,10 +22,11 @@ from urllib.parse import parse_qs, urlparse
 
 import dockerx
 import files
+import ptyterm
 import runtimes
 import stats
 import svc
-from core import (BREW, BREW_PREFIX, ENV, HOME, PKG_RE, SHIM_DIR, ZSHRC_BLOCK_START, ApiError, DATA_DIR, get_job, list_jobs,
+from core import (BREW, BREW_PREFIX, ENV, HOME, PKG_RE, SHIM_DIR, ZSHRC_BLOCK_START, ApiError, DATA_DIR, cancel_job, get_job, list_jobs,
                   load_state, read_home, run, save_state, set_shims, start_job, start_steps, tail)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -782,6 +783,53 @@ def file_read(q):
     return data
 
 
+# ---------------------------------------------------------------- terminal
+
+TERMINAL_APPS = {
+    "terminal": ("Terminal", ["/System/Applications/Utilities/Terminal.app", "/Applications/Utilities/Terminal.app"]),
+    "iterm": ("iTerm", ["/Applications/iTerm.app"]),
+    "warp": ("Warp", ["/Applications/Warp.app"]),
+    "ghostty": ("Ghostty", ["/Applications/Ghostty.app"]),
+}
+
+
+def terminal_apps(q=None):
+    return {"apps": [{"id": k, "name": n} for k, (n, paths) in TERMINAL_APPS.items() if any(os.path.exists(p) for p in paths)]}
+
+
+def open_in_terminal(body):
+    """Jalankan perintah interaktif (claude, vim, ssh, tinker, ...) di aplikasi terminal sungguhan (punya TTY)."""
+    import shlex
+    command = str(body.get("command", "")).strip()
+    cwd = os.path.realpath(os.path.expanduser(str(body.get("cwd") or "~")))
+    if not os.path.isdir(cwd):
+        cwd = HOME
+    app = body.get("app") if body.get("app") in TERMINAL_APPS else "terminal"
+    if app not in [a["id"] for a in terminal_apps()["apps"]]:
+        app = "terminal"
+    line = f"cd {shlex.quote(cwd)}" + (f" && {command}" if command else "")
+    # perintah dikirim sebagai argumen (argv), bukan disisipkan ke teks AppleScript
+    scripts = {
+        "terminal": 'on run argv\n tell application "Terminal"\n  activate\n  do script (item 1 of argv)\n end tell\nend run',
+        "iterm": ('on run argv\n tell application "iTerm"\n  activate\n  set w to (create window with default profile)\n'
+                  '  tell current session of w to write text (item 1 of argv)\n end tell\nend run'),
+    }
+    if app in scripts:
+        code, out, err = run(["osascript", "-e", scripts[app], line], timeout=20)
+        if code != 0:
+            raise ApiError(err.strip() or "gagal membuka terminal", HTTPStatus.INTERNAL_SERVER_ERROR)
+        return {"ok": True, "app": TERMINAL_APPS[app][0], "pasted": False}
+    # Warp/Ghostty: buka tab baru di folder tsb; perintah disalin ke clipboard untuk ditempel (⌘V)
+    if command:
+        subprocess.run(["pbcopy"], input=command, text=True, timeout=5)
+    if app == "warp":
+        from urllib.parse import quote
+        run(["open", f"warp://action/new_tab?path={quote(cwd)}"], timeout=10)
+    else:
+        run(["open", "-na", "Ghostty", "--args", f"--working-directory={cwd}"], timeout=10)
+    return {"ok": True, "app": TERMINAL_APPS[app][0], "pasted": bool(command)}
+
+
 # ---------------------------------------------------------------- sidebar
 
 def nav_info(q):
@@ -845,10 +893,19 @@ GET_ROUTES = {
     "/api/ssh/keys": files.ssh_keys,
     "/api/git/identity": files.git_identity,
     "/api/jobs": list_jobs,
+    "/api/terminal/apps": terminal_apps,
+    "/api/pty/read": ptyterm.read,
+    "/api/pty/list": ptyterm.list_sessions,
     "/api/job": lambda q: get_job(q.get("id", ""), int(q.get("offset", 0) or 0)),
 }
 POST_ROUTES = {
     "/api/action": service_action,
+    "/api/terminal/open": open_in_terminal,
+    "/api/pty/new": ptyterm.new_session,
+    "/api/pty/write": ptyterm.write,
+    "/api/pty/resize": ptyterm.resize,
+    "/api/pty/kill": ptyterm.kill,
+    "/api/job/cancel": cancel_job,
     "/api/services/config": svc.config_save,
     "/api/services/validate": svc.config_validate,
     "/api/services/install": svc.service_install,
