@@ -151,7 +151,10 @@ tabs.dashboard = {
         <div class="card"><h3>Sistem</h3><dl class="kv" id="sysinfo"></dl></div>
         <div class="card"><h3>Proses teratas <span class="spacer"></span>
           <span class="seg">${btn("CPU", "procSort", { by: "cpu" }, "active")}${btn("Memori", "procSort", { by: "mem" })}</span></h3>
-          <table id="procs"></table></div>
+          <table id="procs"></table>
+          <div class="card-foot">
+            ${btn(`<svg viewBox="0 0 24 24" class="am-ico"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Buka Activity Monitor`, "openAM", {}, "", `title="Buka Activity Monitor"`)}
+          </div></div>
       </div>
     </div>`;
   },
@@ -265,6 +268,10 @@ tabs.dashboard = {
       list.map((p) => `<tr><td class="pname" title="${esc(p.name)} · PID ${p.pid}">${esc(p.name)}</td><td class="num">${p.cpu.toFixed(1)}%</td>
         <td class="num">${fmtBytes(p.mem)}</td></tr>`).join("");
   },
+};
+handlers.openAM = async () => {
+  const r = await api("/api/activity-monitor", { tab: tabs.dashboard.procSort });
+  toast(r.was_running ? "Activity Monitor dibuka" : `Activity Monitor dibuka di tab ${tabs.dashboard.procSort === "mem" ? "Memori" : "CPU"}`);
 };
 handlers.procSort = (d, el) => {
   tabs.dashboard.procSort = d.by;

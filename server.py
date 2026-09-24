@@ -830,6 +830,18 @@ def open_in_terminal(body):
     return {"ok": True, "app": TERMINAL_APPS[app][0], "pasted": bool(command)}
 
 
+def open_activity_monitor(body):
+    """Buka Activity Monitor; kalau belum jalan, pilih tab-nya dulu (CPU/Memori/Energi/Disk/Jaringan)."""
+    tab = {"cpu": 0, "mem": 1, "energy": 2, "disk": 3, "network": 4}.get(body.get("tab"), 0)
+    running = run(["pgrep", "-x", "Activity Monitor"], timeout=5)[0] == 0
+    if not running:
+        run(["defaults", "write", "com.apple.ActivityMonitor", "SelectedTab", "-int", str(tab)], timeout=5)
+    code, out, err = run(["open", "-a", "Activity Monitor"], timeout=10)
+    if code != 0:
+        raise ApiError(err.strip() or "gagal membuka Activity Monitor", HTTPStatus.INTERNAL_SERVER_ERROR)
+    return {"ok": True, "was_running": running}
+
+
 # ---------------------------------------------------------------- sidebar
 
 def nav_info(q):
@@ -905,6 +917,7 @@ POST_ROUTES = {
     "/api/pty/write": ptyterm.write,
     "/api/pty/resize": ptyterm.resize,
     "/api/pty/kill": ptyterm.kill,
+    "/api/activity-monitor": open_activity_monitor,
     "/api/job/cancel": cancel_job,
     "/api/services/config": svc.config_save,
     "/api/services/validate": svc.config_validate,
