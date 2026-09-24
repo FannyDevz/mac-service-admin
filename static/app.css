@@ -38,8 +38,7 @@ code, pre, textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospac
 aside { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 6px;
         background: var(--card); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
 .brand { display: flex; gap: 10px; align-items: center; padding: 4px 8px 14px; }
-.brand .logo { width: 30px; height: 30px; padding: 6px; border-radius: 8px; background: var(--accent); stroke: #fff;
-               fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.brand .logo { width: 32px; height: 32px; border-radius: 8px; flex: none; }
 nav { display: flex; flex-direction: column; gap: 2px; }
 .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 14px 10px 4px; }
 nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--text);
