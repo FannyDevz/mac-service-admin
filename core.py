@@ -78,6 +78,40 @@ def save_state(**changes):
         json.dump(state, f, indent=2)
 
 
+def write_json(path, data):
+    """Tulis JSON secara atomik dengan izin 0600 (data pribadi user)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.{threading.get_ident()}.tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(data, f, indent=1)
+    os.replace(tmp, path)
+
+
+def write_json_versioned(path, data):
+    """write_json + backup versi lama ke BACKUP_DIR, simpan 20 terakhir."""
+    if os.path.isfile(path):
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        name = os.path.basename(path)
+        dest = os.path.join(BACKUP_DIR, f"{name}.{time.strftime('%Y%m%d-%H%M%S')}")
+        if not os.path.exists(dest):  # dua kali simpan di detik yang sama: pertahankan versi tertua
+            shutil.copy2(path, dest)
+        for old in list_backups(name)[20:]:
+            os.remove(os.path.join(BACKUP_DIR, old))
+    write_json(path, data)
+
+
+def notify(title, message):
+    """Notifikasi macOS. Teks dikirim sebagai argumen, bukan disisipkan ke AppleScript."""
+    script = ('on run argv\n'
+              'display notification (item 2 of argv) with title (item 1 of argv) sound name "Glass"\n'
+              'end run')
+    try:
+        return run(["/usr/bin/osascript", "-e", script, title, message], timeout=10)[0] == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 # ---------------------------------------------------------------- jobs
 # Perintah lama (brew install, nvm install, ...) berjalan di background;
 # UI mem-poll outputnya.

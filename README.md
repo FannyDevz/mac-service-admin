@@ -36,6 +36,25 @@ sungguhan di browser** (Claude Code, vim, htop jalan normal).
 - Proses teratas (CPU/Memori) + tombol **Buka Activity Monitor**
 - Riwayat 5 menit dengan grafik & tooltip
 
+### 📡 Uptime
+- Pantau web (HTTP/HTTPS) dan server (port TCP atau ping), dengan interval 10 detik sampai 24 jam
+- **Notifikasi macOS** saat down, saat pulih, dan diulang tiap jam selama masih down
+- Riwayat 60 cek terakhir, uptime 24 jam / 7 hari / 30 hari, dan log kejadian
+- Down dinyatakan setelah 2 kali gagal berturut-turut, dan kegagalan saat Mac offline tidak dihitung
+- Pengecekan dilakukan dari Mac ini, jadi hanya berjalan selama Mac menyala dan server aktif
+
+### 📅 Subscription
+- Domain, server, dan subscription (AWS, Supabase, …) dalam satu daftar
+- Catat lokasi (registrar/provider), akun, nameserver/IP, harga, siklus tagihan, tanggal register, jatuh tempo, dan catatan
+- **Reminder** notifikasi macOS 30, 14, 7, 3, dan 1 hari sebelum jatuh tempo, pada harinya, dan setelah lewat
+- Tombol **Sudah diperpanjang** untuk memajukan jatuh tempo 1 siklus, dan perkiraan biaya per tahun per mata uang
+- Disimpan tanpa enkripsi di `~/.service-admin/records.json`, jadi jangan menaruh password di sini
+
+### 👥 Client
+- Catat nama client, perusahaan, nomor HP (dengan tautan WhatsApp), email, web/proyek, tanggal mulai dan selesai, status, dan nilai proyek
+- Filter per status, pencarian, dan total nilai proyek
+- Disimpan tanpa enkripsi di `~/.service-admin/clients.json`
+
 ### 🖥️ Terminal & proses (ikon di header, `Ctrl+``)
 - **Terminal sungguhan** (PTY + xterm.js): zsh dengan `.zshrc` kamu, banyak tab sesi, warna, resize.
   Program interaktif seperti `claude`, `vim`, `htop`, `php artisan tinker`, dan `ssh` jalan normal.
@@ -56,6 +75,31 @@ sungguhan di browser** (Claude Code, vim, htop jalan normal).
 - **Cloudflare Tunnel**: login, buat/hapus tunnel, route DNS, tambah aturan ingress, jalankan/stop tunnel manual.
 
 ![Paket & Service](docs/screenshots/paket-service.png)
+
+### 🍏 Aplikasi Mac
+- Semua aplikasi di `/Applications` (opsional: aplikasi sistem) dengan ikon, versi, **sumber** (App Store / Homebrew / Manual),
+  ukuran, **terakhir dibuka**, dan status berjalan. Bisa dicari, difilter, dan diurutkan.
+- **Buka**, **tutup**, **paksa tutup**, **tampilkan di Finder**.
+- **Update**: aplikasi Homebrew cask (terdeteksi otomatis), App Store (via `mas`, bisa di-install dari halaman ini), dan cek update macOS.
+- Hapus tanda **karantina Gatekeeper** (aplikasi "rusak / tidak bisa dibuka"), pindahkan ke Trash, atau uninstall lewat Homebrew.
+- **Izin privasi**: izin yang diminta aplikasi (kamera, mikrofon, automation, …) dan izin sistem (aksesibilitas, rekam layar,
+  Full Disk Access, input monitoring). Ada tombol **Atur ↗** yang membuka panel System Settings yang tepat, dan tombol **Reset**
+  (`tccutil`) agar aplikasi meminta izin lagi. Status izin terlihat kalau Python diberi Full Disk Access. macOS tidak
+  mengizinkan program memberi izin secara otomatis.
+
+### 🔒 Tailscale
+- Status koneksi, IP & nama MagicDNS Mac ini, **Hubungkan / Putuskan**, link login kalau perlu, netcheck.
+- Daftar **perangkat** di tailnet: online/offline, koneksi langsung atau lewat relay, trafik, **Ping**, **SSH** (buka di tab Terminal),
+  dan **pakai sebagai exit node**.
+- **Serve & Funnel**: bagikan port lokal (mis. Laravel `:8000`) lewat HTTPS ke tailnet atau ke internet.
+- Pengaturan `tailscale set` (MagicDNS, subnet route, shields up, Tailscale SSH, jadi exit node, auto-update) dan ganti akun.
+
+### 🧹 Pembersih (ala CCleaner)
+- Scan & bersihkan **cache aplikasi**, **log & crash report**, **cache browser** (tanpa cookie/riwayat), **Trash**, dan cache developer:
+  Homebrew (`brew cleanup`), npm, Yarn, Bun, pip, Composer, Go, Cargo, Gradle, CocoaPods, Xcode DerivedData & DeviceSupport.
+  Pilih per kategori atau hapus per folder dari rinciannya. Cache milik macOS (`com.apple.*`) dilewati.
+- **File besar** di Home dan isi **Downloads** (filter umur) → pindahkan ke Trash (bisa di-*Put Back*).
+- **Startup**: daftar LaunchAgents/LaunchDaemons beserta statusnya, dan pintasan ke Login Items.
 
 ### 🐳 Docker (OrbStack / Docker Desktop)
 - **Ringkasan**: statistik live per container (CPU, RAM, jaringan, disk, PID), grafik, pemakaian disk & prune.
@@ -212,6 +256,9 @@ svc.py           detail & config service, katalog, 100 rekomendasi, cloudflared
 runtimes.py      deteksi & manajemen bahasa (Python, Go, Rust, Java, Ruby, …)
 files.py         editor file konfigurasi (registry + validator)
 dockerx.py       manajemen Docker
+macapps.py       aplikasi Mac: daftar, buka/tutup, update, karantina, izin privasi (TCC)
+tailscale.py     Tailscale: status, perangkat, exit node, Serve/Funnel, pengaturan
+cleaner.py       pembersih cache/log/Trash, file besar, item startup
 ptyterm.py       terminal PTY untuk browser
 static/          UI (index.html, app.js, *.js per halaman, app.css, icons.js, vendor/xterm)
 macapp/          peluncur macOS (main.swift: nyalakan server → buka browser) + pembuat ikon

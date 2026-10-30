@@ -44,6 +44,12 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 | `svc.py` | Detail service (config file + validator per service), katalog & 100 rekomendasi paket, panel cloudflared |
 | `files.py` | Editor file konfigurasi: registry `STATIC` + resolver, php.ini, `.env` project; validator per jenis |
 | `dockerx.py` | Docker: overview, stats, disk, inspect, logs, exec console, `docker run`, compose (baca/validasi/simpan), context remote |
+| `macapps.py` | Aplikasi Mac: scan `/Applications` (Info.plist, `mdls` ukuran/terakhir dibuka, cask dari `brew info --json` **stdout saja**), ikon PNG (sips/qlmanage, cache `~/.service-admin/cache/icons`, endpoint mengembalikan `{"__raw__": bytes}`), aksi open/quit/trash/unquarantine, izin TCC (baca sqlite read-only kalau bisa, `tccutil reset`, URL `x-apple.systempreferences:`). Path aplikasi selalu divalidasi lewat `find_app` |
+| `tailscale.py` | Tailscale lewat CLI (`Tailscale.app/Contents/MacOS/Tailscale` atau Homebrew): `status --json` + `debug prefs` (hanya field aman, prefs berisi kunci), up/down, `set` (whitelist `SETTINGS`), exit node & ping (IP harus peer di status), Serve/Funnel (port divalidasi, HTTPS 443/8443/10000), `switch` akun |
+| `cleaner.py` | Pembersih ala CCleaner: registry `CATS` (cache, log, browser, cache developer, Trash); hapus hanya isi folder registry / item hasil scan terakhir (`SCAN`), `com.apple.*` dilewati; file besar (`mdfind`, Downloads) → Trash via Finder, hanya path di `LARGE`; daftar LaunchAgents/Daemons (baca saja) |
+| `monitor.py` | Uptime web (HTTP) & server (TCP/ping): thread background (`monitor.start()` di `main`), down setelah 2x gagal berturut-turut, kegagalan saat Mac offline tidak dihitung, notifikasi macOS (`core.notify`) saat down/pulih + diulang tiap jam, juga pemicu reminder `records`. Data: `~/.service-admin/monitor.json` |
+| `records.py` | Catatan domain, server & subscription (lokasi, harga, siklus, register, jatuh tempo), reminder di ambang `LEVELS`, tombol perpanjang. Data: `~/.service-admin/records.json` (0600, backup 20 versi, file rusak = error, bukan dianggap kosong) |
+| `clients.py` | Catatan client pembuatan web (kontak, web, tanggal, status, nilai). Data pribadi: `~/.service-admin/clients.json` (0600, backup 20 versi) |
 | `ptyterm.py` | Terminal sungguhan: sesi `zsh -l -i` di PTY (`pty.fork`), output long-poll (`/api/pty/read`, base64), input/resize/kill lewat POST |
 | `static/index.html` | Shell: sidebar, header (tombol terminal + tema), dialog, panel kanan (tab Terminal / Proses) |
 | `static/app.js` | Core UI: `api()`, `btn()`, `toast`, router hash, `handlers` (event delegation), panel (`panelOpen`/`panelView`), job runner (`runJob`), tema, PHP/Node/Herd |
@@ -51,7 +57,13 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 | `static/vendor/` | xterm.js + addon fit/web-links (MIT), disimpan lokal, jangan diganti CDN |
 | `static/packages.js` | Halaman Paket & Service + detail service (`#service:<nama>`) + cloudflared |
 | `static/docker.js` | Semua halaman Docker (`#docker:<sub>`) + pembuat compose + dialog buat container |
+| `static/macapps.js` | Halaman Aplikasi Mac (`#macapps`, `#macapps:privacy`) dan detail (`#macapp:<path>`, nav `macapps`) |
+| `static/tailscale.js` | Halaman Tailscale (`#tailscale`): status, perangkat (ping/SSH di Terminal/exit node), pengaturan (checkbox `data-ts-flag`), Serve/Funnel, akun |
+| `static/cleaner.js` | Halaman Pembersih (`#cleaner`, `#cleaner:large`, `#cleaner:startup`) |
 | `static/langs.js` | Halaman grup **Bahasa** (`#langs`, kartu 3 kolom + bahasa yang bisa di-install), halaman detail `#lang-<key>` (nav: `langs`), versi/status di sidebar (`applyNav`/`refreshNav`) |
+| `static/monitor.js` | Halaman Uptime (`#monitor`), dialog form bersama `monDialog()` (`#monDlg`), polling lencana sidebar + toast kejadian baru (`monPoll`) |
+| `static/records.js` | Halaman Subscription (`#records`, `#records:domain\|server\|subscription`) |
+| `static/clients.js` | Halaman Client (`#clients`, `#clients:<status>`), memakai `monDialog` dan format dari `records.js` |
 | `static/config.js` | Halaman File konfigurasi (`#config:<id>`) |
 | `static/dashboard.js` | Dashboard statistik + `lineChart()` (SVG, dipakai juga oleh docker.js) |
 | `macapp/main.swift`, `install.sh` | Peluncur `Service Admin.app` (nyalakan server via LaunchAgent/fallback lalu buka browser) dan installer LaunchAgent `local.service-admin`. Server dari launchd butuh izin macOS *Files & Folders → Documents* untuk Python karena project ada di `~/Documents` |
@@ -97,7 +109,7 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
   JSON hasil API asli dan jalankan aksi uji langsung di chain `initRuntimes().then(route).then(...)`
   (bukan `setTimeout`). Matikan transisi CSS kalau perlu (`#job{transition:none}`). Untuk konten yang
   dirender async (xterm.js), tahan event `load` dengan `<img>` dari server kecil yang sengaja lambat.
-- Setelah mengubah `.py`, restart server (`kill $(lsof -ti tcp:8765)`, lalu jalankan lagi). File statis
+- Setelah mengubah `.py`, restart server: `launchctl kickstart -k gui/$UID/local.service-admin` (server jalan lewat LaunchAgent dari `install.sh`; tanpa LaunchAgent: `kill $(lsof -ti tcp:8765)` lalu `python3 server.py`). File statis
   dikirim dengan `Cache-Control: no-cache`, jadi cukup refresh browser.
 
 ## Hal yang perlu diingat
@@ -106,7 +118,7 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 - Jangan menjalankan aksi yang mengubah sistem user saat tes (brew install/uninstall, `herd use`,
   `nvm alias`, simpan `/etc/hosts`, dialog Finder/admin) tanpa diminta. Kalau perlu container/project
   uji, buat di scratchpad lalu bersihkan (`docker rm -f`, `compose down -v`, `rmi` image yang baru di-pull).
-- Data persisten aplikasi: `~/.service-admin/` (`state.json`, `bin/`, `env.zsh`, `backups/`, `logs/`,
+- Data persisten aplikasi: `~/.service-admin/` (`state.json`, `monitor.json`, `records.json`, `clients.json`, `bin/`, `env.zsh`, `backups/`, `logs/`,
   `php-shims/`).
 - Herd gratis tidak punya `services:*` (butuh Herd Pro). CLI Herd ada di
   `~/Library/Application Support/Herd/bin` (`herd`, `php84`, `composer`, `laravel`).

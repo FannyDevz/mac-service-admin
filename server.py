@@ -20,12 +20,18 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import cleaner
+import clients
 import dockerx
 import files
+import macapps
+import monitor
 import ptyterm
+import records
 import runtimes
 import stats
 import svc
+import tailscale
 from core import (BREW, BREW_PREFIX, ENV, HOME, PKG_RE, SHIM_DIR, ZSHRC_BLOCK_START, ApiError, DATA_DIR, cancel_job, get_job, list_jobs,
                   load_state, read_home, run, save_state, set_shims, start_job, start_steps, tail)
 
@@ -864,12 +870,24 @@ def nav_info(q):
             version = plistlib.load(f).get("CFBundleShortVersionString")
         p = herd_processes()
         herd = {"version": version, "running": bool(p["nginx"] and p["fpm"])}
-    return {**data, "docker": docker, "herd": herd}
+    return {**data, "docker": docker, "herd": herd, "tailscale": tailscale.nav_status()}
 
 
 # ---------------------------------------------------------------- HTTP
 
 GET_ROUTES = {
+    "/api/macapps": macapps.list_apps,
+    "/api/macapps/icon": macapps.icon,
+    "/api/macapps/detail": macapps.detail,
+    "/api/macapps/privacy": macapps.privacy_overview,
+    "/api/tailscale": tailscale.info,
+    "/api/monitor": monitor.info,
+    "/api/monitor/alerts": monitor.alerts,
+    "/api/records": records.info,
+    "/api/clients": clients.info,
+    "/api/cleaner": cleaner.scan,
+    "/api/cleaner/large": cleaner.large,
+    "/api/cleaner/startup": cleaner.startup,
     "/api/stats": lambda q: stats.SAMPLER.snapshot(int(q.get("since", 0) or 0)),
     "/api/services": lambda q: {"services": list_services()},
     "/api/services/catalog": svc.catalog,
@@ -911,6 +929,14 @@ GET_ROUTES = {
     "/api/job": lambda q: get_job(q.get("id", ""), int(q.get("offset", 0) or 0)),
 }
 POST_ROUTES = {
+    "/api/macapps/action": macapps.action,
+    "/api/tailscale": tailscale.action,
+    "/api/monitor": monitor.action,
+    "/api/records": records.action,
+    "/api/clients": clients.action,
+    "/api/cleaner/clean": cleaner.clean,
+    "/api/cleaner/large": cleaner.large_action,
+    "/api/cleaner/startup": cleaner.startup_action,
     "/api/action": service_action,
     "/api/terminal/open": open_in_terminal,
     "/api/pty/new": ptyterm.new_session,
@@ -971,9 +997,20 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _raw(self, data, ctype):
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "max-age=86400")
+        self.end_headers()
+        self.wfile.write(data)
+
     def _dispatch(self, handler, arg):
         try:
-            return self._json(handler(arg))
+            result = handler(arg)
+            if isinstance(result, dict) and "__raw__" in result:  # mis. ikon PNG
+                return self._raw(result["__raw__"], result["__type__"])
+            return self._json(result)
         except ApiError as e:
             return self._json({"error": str(e)}, e.status)
         except Exception as e:  # noqa: BLE001
@@ -1007,6 +1044,7 @@ def main():
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8765)))
     args = parser.parse_args()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    monitor.start()
     print(f"Mac Service Admin jalan di http://127.0.0.1:{args.port}  (Ctrl+C untuk berhenti)")
     try:
         server.serve_forever()

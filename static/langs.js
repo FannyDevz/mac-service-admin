@@ -19,6 +19,8 @@ function applyNav(d) {
   if (docker) setNavVersion(docker, d.docker?.version || "–", d.docker ? d.docker.running : null);
   const herd = document.querySelector('[data-nav="herd"]');
   if (herd) setNavVersion(herd, d.herd?.version || "–", d.herd ? d.herd.running : null);
+  const tsNav = document.querySelector('[data-nav="tailscale"]');
+  if (tsNav) setNavVersion(tsNav, d.tailscale ? "" : "–", d.tailscale ? d.tailscale === "Running" : null);
   if (current === tabs.langs && $("langGrid")) tabs.langs.render();
 }
 
