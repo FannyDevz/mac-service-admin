@@ -48,6 +48,7 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 | `tailscale.py` | Tailscale lewat CLI (`Tailscale.app/Contents/MacOS/Tailscale` atau Homebrew): `status --json` + `debug prefs` (hanya field aman, prefs berisi kunci), up/down, `set` (whitelist `SETTINGS`), exit node & ping (IP harus peer di status), Serve/Funnel (port divalidasi, HTTPS 443/8443/10000), `switch` akun |
 | `cleaner.py` | Pembersih ala CCleaner: registry `CATS` (cache, log, browser, cache developer, Trash); hapus hanya isi folder registry / item hasil scan terakhir (`SCAN`), `com.apple.*` dilewati; file besar (`mdfind`, Downloads) → Trash via Finder, hanya path di `LARGE`; daftar LaunchAgents/Daemons (baca saja) |
 | `monitor.py` | Uptime web (HTTP) & server (TCP/ping): thread background (`monitor.start()` di `main`), down setelah 2x gagal berturut-turut, kegagalan saat Mac offline tidak dihitung, notifikasi macOS (`core.notify`) saat down/pulih + diulang tiap jam, juga pemicu reminder `records`. Data: `~/.service-admin/monitor.json` |
+| `ports.py` | Port TCP yang listen (`lsof` + `ps` + `launchctl list`): klasifikasi kegunaan & cara mematikan (`_classify`), pengelola launchd dicari lewat proses induk (`_manager`), argumen perintah disamarkan (`mask`). `action` hanya mengirim sinyal ke PID hasil scan ulang dengan `stop.type == "kill"`; service, aplikasi, dan port macOS ditolak |
 | `records.py` | Catatan domain, server & subscription (lokasi, harga, siklus, register, jatuh tempo), reminder di ambang `LEVELS`, tombol perpanjang. Data: `~/.service-admin/records.json` (0600, backup 20 versi, file rusak = error, bukan dianggap kosong) |
 | `clients.py` | Catatan client pembuatan web (kontak, web, tanggal, status, nilai). Data pribadi: `~/.service-admin/clients.json` (0600, backup 20 versi) |
 | `ptyterm.py` | Terminal sungguhan: sesi `zsh -l -i` di PTY (`pty.fork`), output long-poll (`/api/pty/read`, base64), input/resize/kill lewat POST |
@@ -62,6 +63,7 @@ python3 server.py            # http://127.0.0.1:8765  (--port untuk ganti)
 | `static/cleaner.js` | Halaman Pembersih (`#cleaner`, `#cleaner:large`, `#cleaner:startup`) |
 | `static/langs.js` | Halaman grup **Bahasa** (`#langs`, kartu 3 kolom + bahasa yang bisa di-install), halaman detail `#lang-<key>` (nav: `langs`), versi/status di sidebar (`applyNav`/`refreshNav`) |
 | `static/monitor.js` | Halaman Uptime (`#monitor`), dialog form bersama `monDialog()` (`#monDlg`), polling lencana sidebar + toast kejadian baru (`monPoll`) |
+| `static/ports.js` | Halaman Port (`#ports`): tabel per kelompok, tombol sesuai `stop.type` (`kill`, `brew` lewat `/api/action`, `app` lewat `/api/macapps/action`, `link`) |
 | `static/records.js` | Halaman Subscription (`#records`, `#records:domain\|server\|subscription`) |
 | `static/clients.js` | Halaman Client (`#clients`, `#clients:<status>`), memakai `monDialog` dan format dari `records.js` |
 | `static/config.js` | Halaman File konfigurasi (`#config:<id>`) |

@@ -376,3 +376,9 @@ button.small-btn { padding: 2px 8px; font-size: 12px; }
 .rec-note { white-space: pre-wrap; max-width: 44ch; }
 #monForm .two { margin-bottom: 0; }
 #monForm .field { align-content: start; }
+
+/* Port */
+.port-table th:first-child, .port-table td:first-child { width: 86px; }
+.port-table td:last-child { white-space: nowrap; }
+.port-src { max-width: 340px; }
+.port-src .pname { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

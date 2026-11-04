@@ -43,6 +43,15 @@ sungguhan di browser** (Claude Code, vim, htop jalan normal).
 - Down dinyatakan setelah 2 kali gagal berturut-turut, dan kegagalan saat Mac offline tidak dihitung
 - Pengecekan dilakukan dari Mac ini, jadi hanya berjalan selama Mac menyala dan server aktif
 
+### 🔌 Port
+- Semua port TCP yang sedang listen, dikelompokkan: project & dev server, database & service, aplikasi, sistem macOS
+- **Dipakai untuk apa**: jenis server (Vite, `http.server`, MySQL, AirPlay, …), folder project, proses, PID, lama berjalan
+- Lencana **lokal** atau **jaringan** untuk menunjukkan apakah port bisa dijangkau perangkat lain
+- Tombol menyesuaikan jenisnya: **Hentikan** untuk proses biasa, **Stop service** untuk Homebrew, **Tutup aplikasi** untuk aplikasi Mac, dan tautan ke halaman Herd/Docker/Startup untuk yang dikelola di sana
+- Port macOS tidak diberi tombol hentikan, tetapi diberi petunjuk cara mematikannya
+- Rahasia di argumen perintah (token, password) disamarkan sebelum dikirim ke browser
+- Port milik root tidak terbaca karena dashboard berjalan tanpa `sudo`
+
 ### 📅 Subscription
 - Domain, server, dan subscription (AWS, Supabase, …) dalam satu daftar
 - Catat lokasi (registrar/provider), akun, nameserver/IP, harga, siklus tagihan, tanggal register, jatuh tempo, dan catatan
@@ -258,6 +267,7 @@ files.py         editor file konfigurasi (registry + validator)
 dockerx.py       manajemen Docker
 macapps.py       aplikasi Mac: daftar, buka/tutup, update, karantina, izin privasi (TCC)
 tailscale.py     Tailscale: status, perangkat, exit node, Serve/Funnel, pengaturan
+ports.py         Port yang listen: kegunaan, asal project, dan cara mematikannya
 cleaner.py       pembersih cache/log/Trash, file besar, item startup
 ptyterm.py       terminal PTY untuk browser
 static/          UI (index.html, app.js, *.js per halaman, app.css, icons.js, vendor/xterm)

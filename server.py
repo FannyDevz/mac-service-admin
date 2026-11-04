@@ -26,6 +26,7 @@ import dockerx
 import files
 import macapps
 import monitor
+import ports
 import ptyterm
 import records
 import runtimes
@@ -882,6 +883,7 @@ GET_ROUTES = {
     "/api/macapps/privacy": macapps.privacy_overview,
     "/api/tailscale": tailscale.info,
     "/api/monitor": monitor.info,
+    "/api/ports": ports.info,
     "/api/monitor/alerts": monitor.alerts,
     "/api/records": records.info,
     "/api/clients": clients.info,
@@ -932,6 +934,7 @@ POST_ROUTES = {
     "/api/macapps/action": macapps.action,
     "/api/tailscale": tailscale.action,
     "/api/monitor": monitor.action,
+    "/api/ports": ports.action,
     "/api/records": records.action,
     "/api/clients": clients.action,
     "/api/cleaner/clean": cleaner.clean,
